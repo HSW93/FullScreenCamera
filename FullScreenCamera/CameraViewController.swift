@@ -57,17 +57,58 @@ class CameraViewController: UIViewController {
         captureButton.layer.cornerRadius = captureButton.bounds.height/2
         captureButton.layer.masksToBounds = true
         
+        blurBGView.layer.cornerRadius = blurBGView.bounds.height/2
+        blurBGView.layer.masksToBounds = true
     }
     
     
     @IBAction func switchCamera(sender: Any) {
         // TODO: 카메라는 1개 이상이어야함
-        
+        guard videoDeviceDiscoverySession.devices.count > 1 else {
+            return
+        }
         
         // TODO: 반대 카메라 찾아서 재설정
+        // - 반대 카메라 찾고
+        // - 새로운 디바이스를 가지고 세션을 업그레이드
+        // - 카메라 토글 버튼 업데이트
         
+        sessionQueue.async {
+            let correntVideoDevice = self.videoDeviceInput.device
+            let currentPosition = correntVideoDevice.position
+            let isFront = currentPosition == .front
+            let preferredPosition: AVCaptureDevice.Position = isFront ? .back : .front
+            
+            let devices = self.videoDeviceDiscoverySession.devices
+            var newVideoDevice: AVCaptureDevice?
+            
+            newVideoDevice = devices.first(where: { device in
+                return preferredPosition == device.position
+            })
+//            update capture session
+            if let newDevice = newVideoDevice {
+                
+                do {
+                    let videoDeviceInput = try AVCaptureDeviceInput(device: newDevice)
+                    self.captureSession.beginConfiguration()
+                    self.captureSession.removeInput(self.videoDeviceInput)
+                    
+//                    add new device input
+                    if self.captureSession.canAddInput(videoDeviceInput) {
+                        self.captureSession.addInput(videoDeviceInput)
+                        self.videoDeviceInput = videoDeviceInput
+                    } else {
+                        self.captureSession.addInput(self.videoDeviceInput)
+                    }
+                    self.captureSession.commitConfiguration()
+                    
+                    
+                    
+                } catch {
+            }
+        }
     }
-    
+    }
     func updateSwitchCameraIcon(position: AVCaptureDevice.Position) {
         // TODO: Update ICON
         
